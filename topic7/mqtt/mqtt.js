@@ -1,20 +1,23 @@
-const mongoose = require('mongoose');
-mongoose.connect('mongodb+srv://aadi333:Aadimahala70154@cluster0.wstqz17.mongodb.net/mydb', { useNewUrlParser: true, useUnifiedTopology: true });
-
-
 const mqtt = require('mqtt');
 const express = require('express');
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+mongoose.connect('mongodb+srv://aadi333:Aadimahala70154@cluster0.wstqz17.mongodb.net/mydb', { useNewUrlParser: true, useUnifiedTopology: true });
+const randomCoordinates = require('random-coordinates');
+
+const Device = require('./models/device');
 
 const app = express();
 app.use(express.static('public'));
+
+const port = 5001;
 
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
 });
-const port = 5001;
+
 
 
 
@@ -25,11 +28,16 @@ app.use(bodyParser.urlencoded({
 
 const client = mqtt.connect("mqtt://broker.hivemq.com:1883");
 
+client.on('connect', () => {
+    client.subscribe('/sensorData');
+    console.log('mqtt connected');
+});
+
 client.on('message', (topic, message) => {
     if (topic == '/sensorData') {
         const data = JSON.parse(message);
 
-        Device.findOne({ "name": data.deviceId }, (err, device) => {
+        Device.findOne({"name": data.deviceId}, (err, device) => {
             if (err) {
                 console.log(err)
             }
@@ -51,8 +59,26 @@ client.on('message', (topic, message) => {
 
 app.post('/send-command', (req, res) => {
     const { deviceId, command } = req.body;
-    const topic = `/myid/command/${deviceId}`;
+    const topic = `/2110994838/command/${deviceId}`;
     client.publish(topic, command, () => {
+        res.send('published new message');
+    });
+});
+
+app.put('/sensor-data', (req, res) => {
+    const { deviceId } = req.body;
+
+    const [lat, lon] = randomCoordinates().split(", ");
+    const ts = new Date().getTime();
+    const loc = { lat, lon };
+    min = Math.ceil(20);
+    max = Math.floor(50);
+    temp = Math.floor(Math.random() * (max - min + 1) + min);
+
+    const topic = `/sensorData`;
+    const message = JSON.stringify({ deviceId, ts, loc, temp });
+
+    client.publish(topic, message, () => {
         res.send('published new message');
     });
 });

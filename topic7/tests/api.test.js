@@ -6,6 +6,6 @@ test('test device array', () => {
   return axios.get(`${API_URL}/devices`)
     .then(resp => resp.data)
     .then(resp => {
-      expect(resp[0].user).toEqual('mary123');
+      expect(resp[0].user).toEqual('not-a-user');
     });
 });

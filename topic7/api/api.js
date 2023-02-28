@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 mongoose.connect('mongodb+srv://aadi333:Aadimahala70154@cluster0.wstqz17.mongodb.net/mydb', { useNewUrlParser: true, useUnifiedTopology: true });
 const express = require('express');
+const bodyParser = require('body-parser');
 
 const Device = require('./models/device');
 
 const app = express();
-const bodyParser = require('body-parser');
+const port = 5000;
+
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
-
 
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -16,33 +17,18 @@ app.use(function (req, res, next) {
     next();
 });
 
+app.use(express.static(`${__dirname}/public/generated-docs`));
 
-const port = 5000;
+app.get('/docs', (req, res) => {
+    res.sendFile(`${__dirname}/public/generated-docs/index.html`);
+});
 
 app.get('/api/test', (req, res) => {
     res.send('The API is working!');
 });
 
-
-
-
-app.post('/api/devices', (req, res) => {
-    const { name, user, sensorData } = req.body;
-    const newDevice = new Device({
-        name,
-        user,
-        sensorData
-    });
-    newDevice.save(err => {
-        return err
-            ? res.send(err)
-            : res.send('successfully added device and data');
-    });
-});
-
-
 /**
-* @api {get} /api/devices AllDevices An array of all devices
+* @api {get} /api/devices All Devices An array of all devices
 * @apiGroup Device
 * @apiSuccessExample {json} Success-Response:
 *  [
@@ -75,13 +61,6 @@ app.post('/api/devices', (req, res) => {
 *    "User does not exist"
 *  }
 */
-
-app.get('/api/devices', (req, res) => {
-    Device.find({}, (err, devices) => {
-        return res.send(devices);
-    });
-});
-
 app.get('/api/devices', (req, res) => {
     Device.find({}, (err, devices) => {
         if (err == true) {
@@ -92,12 +71,54 @@ app.get('/api/devices', (req, res) => {
     });
 });
 
-app.listen(port, () => {
-    console.log(`listening on port ${port}`);
+
+/**
+* @api {post} /api/devices Add new device
+* @apiGroup Device
+* @apiExample {json} Successful Response:
+*   {
+*       "successfully added device and data"
+*   }
+* @apiParam {String} name User's name and device name 
+* @apiParam {String} user User's name
+* @apiParam {Object} sensorData Data from the sensor
+* @apiParam {String} sensorData[ts] Device number
+* @apiParam {Number} sensorData[temp] Device temperature
+* @apiParam {Number} sensorData[loc] Device location
+* @apiParam {Number} loc[lat] Device latitude 
+* @apiParam {Number} loc[lon] Device longitude
+* @apiParamExample {json} Example Post:
+*  [
+* {
+*   "name": "Bob's iPhone",
+*   "user": "bob",
+*   "sensorData": [
+*     {
+*       "ts": "1529545935",
+*       "temp": 14,
+*       "loc": {
+*         "lat": -37.839587,
+*         "lon": 145.101386
+*       }
+*     }
+*   ]
+*  } 
+*  ]
+*/
+app.post('/api/devices', (req, res) => {
+    const { name, user, sensorData } = req.body;
+    const newDevice = new Device({
+        name,
+        user,
+        sensorData
+    });
+    newDevice.save(err => {
+        return err
+            ? res.send(err)
+            : res.send('successfully added device and data');
+    });
 });
 
-app.use(express.static(`${__dirname}/public/generated-docs`));
-
-app.get('/docs', (req, res) => {
-    res.sendFile(`${__dirname}/public/generated-docs/index.html`);
+app.listen(port, () => {
+    console.log(`listening on port ${port}`);
 });
